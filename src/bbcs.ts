@@ -59,6 +59,8 @@ class BBCS {
 
 	private textArea = document.getElementById('save-textarea') as HTMLTextAreaElement;
 
+	private shiftKeyHeld = false;
+
 	constructor(app: PIXI.Application) {
 		this.app = app;
 
@@ -226,6 +228,10 @@ class BBCS {
 			} else if (event.key === "Delete") {
 				this.delete();
 			}
+			this.shiftKeyHeld = event.shiftKey;
+		});
+		window.addEventListener("keyup", (event: KeyboardEvent) => {
+			this.shiftKeyHeld = event.shiftKey;
 		});
 
 		this.update();
@@ -302,21 +308,20 @@ class BBCS {
 		if (this.simulationMode === SimulationMode.RESET) {
 
 			if (this.editMode === EditMode.SELECT) {
-				this.deselect();
+				if (!this.shiftKeyHeld) {
+					this.deselect();
+				}
 				const ball = this.world.getBall(Math.round(x), Math.round(y));
 				if (ball) {
-					this.deselect();
 					this.select(ball);
 				} else {
 					const [from, to] = this.getWallCoordinates(Math.floor(x), Math.floor(y));
 					const wall = this.world.getWall(from, to);
 					if (wall) {
-						this.deselect();
 						this.select(wall);
 					} else {
 						const annotation = this.world.getAnnotation(Math.round(x), Math.round(y));
 						if (annotation) {
-							this.deselect();
 							this.select(annotation);
 						}
 					}
