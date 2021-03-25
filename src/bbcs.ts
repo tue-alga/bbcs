@@ -2,11 +2,12 @@ import * as PIXI from 'pixi.js';
 
 import {Direction, Ball, Color} from './ball';
 import {Wall} from './wall';
+import {Annotation} from './annotation';
 import {World} from './world';
 import {Button, Separator, Toolbar} from './ui';
 
 enum EditMode {
-	SELECT, ADD_BALL, ADD_WALL
+	SELECT, ADD_BALL, ADD_WALL, ADD_ANNOTATION
 }
 
 enum SimulationMode {
@@ -26,8 +27,11 @@ class BBCS {
 
 	world: World;
 
+	// the "shadow" appearing below the cursor when in an addition mode
+	dropHint = new PIXI.Graphics();
+
 	// selected objects
-	private selection: (Ball | Wall) [] = [];
+	private selection: (Ball | Wall | Annotation) [] = [];
 
 	// direction and color of last-edited ball
 	// (remembered to insert new balls with the same direction and color)
@@ -44,6 +48,7 @@ class BBCS {
 	private selectButton: Button;
 	private addBallButton: Button;
 	private addWallButton: Button;
+	private addAnnotationButton: Button;
 
 	private rotateLeftButton: Button;
 	private rotateRightButton: Button;
@@ -91,6 +96,11 @@ class BBCS {
 			"add-wall", "Add walls", "W");
 		this.addWallButton.onClick(this.addWallsMode.bind(this));
 		this.bottomBar.addChild(this.addWallButton);
+
+		this.addAnnotationButton = new Button(
+			"add-annotation", "Add annotation", "A");
+		this.addAnnotationButton.onClick(this.addAnnotationsMode.bind(this));
+		this.bottomBar.addChild(this.addAnnotationButton);
 
 		this.bottomBar.addChild(new Separator());
 
@@ -182,21 +192,8 @@ class BBCS {
 
 	setup() {
 		this.app.stage.addChild(this.world.viewport);
-
-		/*this.world.addBall(2, -2, Direction.RIGHT);
-		this.world.addBall(4, -4, Direction.UP);
-		this.world.addBall(8, -4, Direction.LEFT);
-		this.world.addBall(10, -8, Direction.UP);
-		this.world.addBall(7, -5, Direction.LEFT);
-		//this.world.addBall(6, -2, Direction.DOWN);
-		this.world.addBall(12, -12, Direction.UP);
-		//this.world.addBall(12, 6, Direction.DOWN);*/
-		
-		/*// and gate
-		this.world.addBall(-3, 1, Direction.RIGHT);
-		this.world.addBall(0, 4, Direction.DOWN);
-		this.world.addWall([1, 3], [2, 2]);
-		this.world.addWall([-2, -2], [-1, -3]);*/
+		this.world.pixi.addChild(this.dropHint);
+		this.dropHint.filters = [new PIXI.filters.AlphaFilter(0.4)];
 
 		this.bottomBar.rebuildPixi();
 		this.app.stage.addChild(this.bottomBar.getPixi());
@@ -210,6 +207,7 @@ class BBCS {
 		this.world.pixi.hitArea = new PIXI.Rectangle(-10000, -10000, 20000, 20000);  // TODO should be infinite ...
 		this.world.pixi.on('click', this.worldClickHandler.bind(this));
 		this.world.pixi.on('tap', this.worldClickHandler.bind(this));
+		this.world.pixi.on('mousemove', this.worldMouseMoveHandler.bind(this));
 
 		// key handlers
 		window.addEventListener("keydown", (event: KeyboardEvent) => {
@@ -223,6 +221,8 @@ class BBCS {
 				this.addBallsMode();
 			} else if (event.key === "w") {
 				this.addWallsMode();
+			} else if (event.key === "a") {
+				this.addAnnotationsMode();
 			} else if (event.key === "Delete") {
 				this.delete();
 			}
@@ -234,7 +234,7 @@ class BBCS {
 	update(): void {
 	}
 
-	select(obj: Ball | Wall): void {
+	select(obj: Ball | Wall | Annotation): void {
 		this.selection.push(obj);
 		obj.selected = true;
 		obj.updatePosition(this.time, this.timeStep);
@@ -297,7 +297,7 @@ class BBCS {
 		const p = e.data.getLocalPosition(this.world.pixi);
 		let x = p.x / 80;
 		let y = -p.y / 80;
-		console.log(x, y);
+		this.dropHint.clear();
 
 		if (this.simulationMode === SimulationMode.RESET) {
 
@@ -313,6 +313,12 @@ class BBCS {
 					if (wall) {
 						this.deselect();
 						this.select(wall);
+					} else {
+						const annotation = this.world.getAnnotation(Math.round(x), Math.round(y));
+						if (annotation) {
+							this.deselect();
+							this.select(annotation);
+						}
 					}
 				}
 			}
@@ -337,9 +343,19 @@ class BBCS {
 
 				const [from, to] = this.getWallCoordinates(x, y);
 				if (!this.world.hasWall(from, to)) {
-					let newWall = this.world.addWall(from, to);
+					const newWall = this.world.addWall(from, to);
 					this.deselect();
 					this.select(newWall);
+				}
+			}
+
+			if (this.editMode === EditMode.ADD_ANNOTATION) {
+				let text = window.prompt('Enter annotation text');
+				if (text) {
+					const newAnnotation = this.world.addAnnotation(
+							[Math.round(x), Math.round(y)], text);
+					this.deselect();
+					this.select(newAnnotation);
 				}
 			}
 		}
@@ -354,9 +370,58 @@ class BBCS {
 		}
 	}
 
+	worldMouseMoveHandler(e: PIXI.interaction.InteractionEvent): void {
+		const p = e.data.getLocalPosition(this.world.pixi);
+		let x = p.x / 80;
+		let y = -p.y / 80;
+
+		if (this.simulationMode === SimulationMode.RESET) {
+			this.dropHint.clear();
+
+			if (this.editMode === EditMode.ADD_BALL) {
+				x = Math.round(x);
+				y = Math.round(y);
+
+				if ((x + y) % 2 === 0) {
+					this.dropHint.x = x * 80;
+					this.dropHint.y = -y * 80;
+					const [vx, vy] = this.lastDirection.toVector();
+					this.dropHint.rotation = -Math.atan2(vy, vx);
+					Ball.drawPixi(this.dropHint, this.lastColor);
+				}
+			}
+
+			if (this.editMode === EditMode.ADD_WALL) {
+				x = Math.floor(x);
+				y = Math.floor(y);
+
+				const [from, to] = this.getWallCoordinates(x, y);
+				if (!this.world.hasWall(from, to)) {
+					this.dropHint.x = x * 80;
+					this.dropHint.y = -y * 80;
+
+					Wall.drawPixi(this.dropHint, this.world.isWallPositive(from, to));
+				}
+			}
+
+			if (this.editMode === EditMode.ADD_ANNOTATION) {
+				x = Math.round(x);
+				y = Math.round(y);
+
+				this.dropHint.x = x * 80;
+				this.dropHint.y = -y * 80;
+				this.dropHint.beginFill(0x2277bb);
+				this.dropHint.drawCircle(0, 0, 10);
+				this.dropHint.endFill();
+			}
+		}
+	}
+
 	// button handlers
 
 	run(): void {
+		this.dropHint.clear();
+
 		if (this.simulationMode === SimulationMode.RUNNING) {
 			this.simulationMode = SimulationMode.PAUSED;
 			this.runButton.setIcon("play");
@@ -375,10 +440,13 @@ class BBCS {
 		this.selectButton.setEnabled(false);
 		this.addBallButton.setEnabled(false);
 		this.addWallButton.setEnabled(false);
+		this.addAnnotationButton.setEnabled(false);
 		this.saveButton.setEnabled(false);
 	}
 
 	step(): void {
+		this.dropHint.clear();
+
 		this.runUntil = Math.floor(this.time) + 1;
 		this.simulationMode = SimulationMode.RUNNING;
 		this.runButton.setIcon("pause");
@@ -390,6 +458,7 @@ class BBCS {
 		this.selectButton.setEnabled(false);
 		this.addBallButton.setEnabled(false);
 		this.addWallButton.setEnabled(false);
+		this.addAnnotationButton.setEnabled(false);
 		this.saveButton.setEnabled(false);
 	}
 
@@ -403,6 +472,7 @@ class BBCS {
 		this.selectButton.setEnabled(true);
 		this.addBallButton.setEnabled(true);
 		this.addWallButton.setEnabled(true);
+		this.addAnnotationButton.setEnabled(true);
 		this.saveButton.setEnabled(true);
 
 		this.world.reset();
@@ -416,6 +486,8 @@ class BBCS {
 		this.selectButton.setPressed(true);
 		this.addBallButton.setPressed(false);
 		this.addWallButton.setPressed(false);
+		this.addAnnotationButton.setPressed(false);
+		this.dropHint.clear();
 	}
 
 	addBallsMode(): void {
@@ -423,6 +495,8 @@ class BBCS {
 		this.selectButton.setPressed(false);
 		this.addBallButton.setPressed(true);
 		this.addWallButton.setPressed(false);
+		this.addAnnotationButton.setPressed(false);
+		this.dropHint.clear();
 	}
 	
 	addWallsMode(): void {
@@ -430,6 +504,17 @@ class BBCS {
 		this.selectButton.setPressed(false);
 		this.addBallButton.setPressed(false);
 		this.addWallButton.setPressed(true);
+		this.addAnnotationButton.setPressed(false);
+		this.dropHint.clear();
+	}
+
+	addAnnotationsMode(): void {
+		this.editMode = EditMode.ADD_ANNOTATION;
+		this.selectButton.setPressed(false);
+		this.addBallButton.setPressed(false);
+		this.addWallButton.setPressed(false);
+		this.addAnnotationButton.setPressed(true);
+		this.dropHint.clear();
 	}
 
 	delete(): void {
@@ -439,6 +524,8 @@ class BBCS {
 				this.world.removeBall(x, y);
 			} else if (obj instanceof Wall) {
 				this.world.removeWall(obj);
+			} else if (obj instanceof Annotation) {
+				this.world.removeAnnotation(obj);
 			}
 			this.deselect();
 		});
@@ -475,6 +562,17 @@ class Constants {
 		fontFamily: "Fira Sans",
 		fontSize: 12,
 		fill: "white"
+	});
+	static readonly annotationStyle = new PIXI.TextStyle({
+		fontFamily: "Fira Sans",
+		fontSize: 50,
+		fill: "black"
+	});
+	static readonly annotationSelectionStyle = new PIXI.TextStyle({
+		fontFamily: "Fira Sans",
+		fontSize: 50,
+		strokeThickness: 5,
+		stroke: 0x2277bb
 	});
 }
 

@@ -116,29 +116,34 @@ class Ball {
 	}
 
 	updatePixi(): void {
+		this.selectionCircle.filters = [new PIXI.filters.BlurFilter(4)];
 		this.selectionCircle.clear();
 		this.selectionCircle.beginFill(0x2277bb);
 		this.selectionCircle.drawCircle(0, 0, 50 * Math.SQRT2);
 		this.selectionCircle.endFill();
 
-		this.circle.clear();
-		this.circle.beginFill(this.color.toHexColor());
-		this.circle.lineStyle(4, 0x222222);
-		this.circle.drawCircle(0, 0, 40 * Math.SQRT2);
-		this.circle.endFill();
-		this.circle.beginFill(0x222222);
-		this.circle.moveTo(75, 0);
-		this.circle.lineTo(65, 10);
-		this.circle.lineTo(65.57, 5);
-		this.circle.lineTo(65.77, 0);
-		this.circle.lineTo(65.57, -5);
-		this.circle.lineTo(65, -10);
-		this.circle.closePath();
-		this.circle.endFill();
+		Ball.drawPixi(this.circle, this.color);
+	}
+
+	static drawPixi(p: PIXI.Graphics, color: Color): void {
+		p.clear();
+		p.beginFill(color.toHexColor());
+		p.lineStyle(4, 0x222222);
+		p.drawCircle(0, 0, 40 * Math.SQRT2);
+		p.endFill();
+		p.beginFill(0x222222);
+		p.moveTo(75, 0);
+		p.lineTo(65, 10);
+		p.lineTo(65.57, 5);
+		p.lineTo(65.77, 0);
+		p.lineTo(65.57, -5);
+		p.lineTo(65, -10);
+		p.closePath();
+		p.endFill();
 	}
 
 	updatePosition(time: number, timeStep: number): void {
-		let [vx, vy] = this.d.toVector();
+		const [vx, vy] = this.d.toVector();
 		this.circle.x = (this.p.x + (time - timeStep) * vx) * 80;
 		this.circle.y = -(this.p.y + (time - timeStep) * vy) * 80;
 		this.circle.rotation = -Math.atan2(this.d.vy, this.d.vx);

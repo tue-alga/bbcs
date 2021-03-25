@@ -3,6 +3,7 @@ import {Viewport} from 'pixi-viewport';
 
 import {Ball, Direction, Color} from './ball';
 import {Wall} from './wall';
+import {Annotation} from './annotation';
 
 type WorldCell = {
 	ball: Ball | null;
@@ -23,6 +24,7 @@ class World {
 
 	balls: Ball[] = [];
 	walls: Wall[] = [];
+	annotations: Annotation[] = [];
 
 	constructor() {
 		this.viewport.addChild(this.pixi);
@@ -133,8 +135,13 @@ class World {
 	addWall(from: [number, number], to: [number, number]): Wall {
 		const [x1, y1, x2, y2] = this.checkWallCoords(from, to);
 		const [x3, y3] = [Math.min(x1, x2), Math.min(y1, y2)];
-		let wallIsPositive = (x3 === x1 && y3 === y1) || (x3 === x2 && y3 === y2);
-		return this.addWallTopLeft(x3, y3, wallIsPositive);
+		return this.addWallTopLeft(x3, y3, this.isWallPositive(from, to));
+	}
+
+	isWallPositive(from: [number, number], to: [number, number]): boolean {
+		const [x1, y1, x2, y2] = this.checkWallCoords(from, to);
+		const [x3, y3] = [Math.min(x1, x2), Math.min(y1, y2)];
+		return (x3 === x1 && y3 === y1) || (x3 === x2 && y3 === y2);
 	}
 	
 	private addWallTopLeft(x: number, y: number, positive: boolean): Wall {
@@ -157,6 +164,18 @@ class World {
 			this.getCell(wall.p.x, wall.p.y).negativeWall = null;
 		}
 		this.walls = this.walls.filter((w) => w !== wall);
+	}
+
+	addAnnotation(position: [number, number], text: string): Annotation {
+		let annotation = new Annotation(this, position, text);
+		this.annotations.push(annotation);
+		this.pixi.addChild(annotation.pixi);
+		return annotation;
+	}
+
+	removeAnnotation(annotation: Annotation): void {
+		this.pixi.removeChild(annotation.pixi);
+		this.annotations = this.annotations.filter((a) => a !== annotation);
 	}
 
 	getBall(x: number, y: number): Ball | null {
@@ -211,6 +230,15 @@ class World {
 		this.getCell(x, y).ball = null;
 	}
 
+	getAnnotation(x: number, y: number): Annotation | null {
+		for (let annotation of this.annotations) {
+			if (annotation.p[0] === x && annotation.p[1] === y) {
+				return annotation;
+			}
+		}
+		return null;
+	}
+
 	nextStep(step: number): void {
 		this.balls.forEach((ball) => {
 			const from: [number, number] =
@@ -263,10 +291,19 @@ class World {
 				'p': wall.positive
 			});
 		});
+		let annotations: any = [];
+		this.annotations.forEach((annotation) => {
+			annotations.push({
+				'x': annotation.p[0],
+				'y': annotation.p[1],
+				'text': annotation.text
+			});
+		});
 		let obj: any = {
-			'_version': 2,
+			'_version': 3,
 			'balls': balls,
-			'walls': walls
+			'walls': walls,
+			'annotations': annotations
 		};
 		return JSON.stringify(obj);
 	}
@@ -274,7 +311,7 @@ class World {
 	deserialize(data: string): void {
 		let obj: any = JSON.parse(data);
 
-		if (obj['_version'] > 2) {
+		if (obj['_version'] > 3) {
 			throw 'Save file with incorrect version';
 		}
 
@@ -292,6 +329,14 @@ class World {
 		walls.forEach((wall: any) => {
 			this.addWallTopLeft(wall['x'], wall['y'], wall['p']);
 		});
+
+		if (obj.hasOwnProperty('annotations')) {
+			let annotations: any[] = obj['annotations'];
+			annotations.forEach((annotation: any) => {
+				this.addAnnotation([annotation['x'], annotation['y']],
+						annotation['text']);
+			});
+		}
 	}
 }
 
