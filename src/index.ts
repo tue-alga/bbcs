@@ -14,6 +14,9 @@ app.renderer.resize(window.innerWidth, window.innerHeight);
 // when hovering over an object (why is this not default?)
 app.renderer.plugins.interaction.moveWhenInside = true;
 
+let ticker = PIXI.Ticker.shared;
+ticker.maxFPS = 30;
+
 window.addEventListener('resize', (event: UIEvent) => {
 	app.renderer.resize(window.innerWidth, window.innerHeight);
 });

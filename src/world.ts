@@ -4,6 +4,7 @@ import {Viewport} from 'pixi-viewport';
 import {Ball, Direction, Color} from './ball';
 import {Wall} from './wall';
 import {Annotation} from './annotation';
+import {Line} from './line';
 
 type WorldCell = {
 	ball: Ball | null;
@@ -25,6 +26,7 @@ class World {
 	balls: Ball[] = [];
 	walls: Wall[] = [];
 	annotations: Annotation[] = [];
+	lines: Line[] = [];
 
 	constructor() {
 		this.viewport.addChild(this.pixi);
@@ -176,6 +178,18 @@ class World {
 	removeAnnotation(annotation: Annotation): void {
 		this.pixi.removeChild(annotation.pixi);
 		this.annotations = this.annotations.filter((a) => a !== annotation);
+	}
+
+	addLine(p1: [number, number], p2: [number, number]): Line {
+		let line = new Line(this, p1, p2);
+		this.lines.push(line);
+		this.pixi.addChild(line.pixi);
+		return line;
+	}
+
+	removeLine(line: Line): void {
+		this.pixi.removeChild(line.pixi);
+		this.lines = this.lines.filter((l) => l !== line);
 	}
 
 	getBall(x: number, y: number): Ball | null {

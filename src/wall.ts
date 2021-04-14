@@ -38,6 +38,22 @@ class Wall {
 		this.updatePosition(0, 0);
 	}
 
+	getStartPosition(): [number, number] {
+		if (this.positive) {
+			return [this.p.x, this.p.y];
+		} else {
+			return [this.p.x, this.p.y + 1];
+		}
+	}
+
+	getEndPosition(): [number, number] {
+		if (this.positive) {
+			return [this.p.x + 1, this.p.y + 1];
+		} else {
+			return [this.p.x + 1, this.p.y];
+		}
+	}
+
 	static drawPixi(p: PIXI.Graphics, positive: boolean): void {
 		p.lineStyle(4, 0x222222);
 		if (positive) {

@@ -285,6 +285,10 @@ class Toolbar extends Component {
 		}
 		return height + Toolbar.Y_MARGIN + Toolbar.BOTTOM_MARGIN;
 	}
+
+	setVisible(visible: boolean): void {
+		this.getPixi().visible = visible;
+	}
 }
 
 export {Button, Separator, Toolbar};
