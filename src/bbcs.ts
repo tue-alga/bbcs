@@ -608,11 +608,12 @@ class BBCS {
 		}
 
 		this.deselect();
+		this.panButton.setEnabled(false);
 		this.resetButton.setEnabled(true);
 		this.selectButton.setEnabled(false);
 		this.addBallButton.setEnabled(false);
 		this.addWallButton.setEnabled(false);
-		this.annotateButton.setPressed(false);
+		this.annotateButton.setEnabled(false);
 		this.annotationsBar.setVisible(false);
 		this.saveButton.setEnabled(false);
 	}
@@ -628,10 +629,11 @@ class BBCS {
 		this.deselect();
 		this.stepButton.setEnabled(false);
 		this.resetButton.setEnabled(true);
+		this.panButton.setEnabled(false);
 		this.selectButton.setEnabled(false);
 		this.addBallButton.setEnabled(false);
 		this.addWallButton.setEnabled(false);
-		this.annotateButton.setPressed(false);
+		this.annotateButton.setEnabled(false);
 		this.annotationsBar.setVisible(false);
 		this.saveButton.setEnabled(false);
 	}
@@ -643,11 +645,11 @@ class BBCS {
 		this.stepButton.setEnabled(true);
 		this.resetButton.setEnabled(false);
 
+		this.panButton.setEnabled(true);
 		this.selectButton.setEnabled(true);
 		this.addBallButton.setEnabled(true);
 		this.addWallButton.setEnabled(true);
-		this.annotateButton.setPressed(false);
-		this.annotationsBar.setVisible(false);
+		this.annotateButton.setEnabled(true);
 		this.saveButton.setEnabled(true);
 
 		this.world.reset();
