@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE ipe SYSTEM "ipe.dtd">
 <ipe version="70218" creator="Ipe 7.2.23">
-<info created="D:20200331165146" modified="D:20210317125906" tex="xetex"/>
+<info created="D:20200331165146" modified="D:20210421103129" tex="xetex"/>
 <preamble>\usepackage{fontspec}
 \setmainfont{Fira Sans Medium}</preamble>
 <ipestyle name="bettinacolors">
@@ -503,23 +503,6 @@ h
 70 756 l
 h
 </path>
-<path matrix="1 0 0 1 -110 -728" fill="black">
-8 0 0 8 124 746 e
-6 0 0 6 124 746 e
-130 736 m
-130 738 l
-132 738 l
-132 740 l
-134 740 l
-134 738 l
-136 738 l
-136 736 l
-134 736 l
-134 734 l
-132 734 l
-132 736 l
-h
-</path>
 <path matrix="0.707107 0.707107 -0.707107 0.707107 424.193 -618.467" fill="black">
 157.172 728.787 m
 158.586 730.201 l
@@ -756,5 +739,100 @@ h
 </path>
 <text matrix="1 0 0 1 0 -1" transformations="translations" pos="13 19" stroke="black" type="label" width="12.046" height="14.278" depth="0" halign="center" valign="center" size="huge">A</text>
 </group>
+<path matrix="0 -1 1 0 0 96" fill="black">
+0 2 -2 0 80 16 e
+74 19 m
+74 17 l
+76 16 l
+74 15 l
+74 13 l
+71 16 l
+h
+77 10 m
+79 10 l
+80 12 l
+81 10 l
+83 10 l
+80 7 l
+h
+86 13 m
+86 15 l
+84 16 l
+86 17 l
+86 19 l
+89 16 l
+h
+83 22 m
+81 22 l
+80 20 l
+79 22 l
+77 22 l
+80 25 l
+h
+</path>
+<path matrix="1 0 0 1 -32 0" fill="black">
+44.6036 8 m
+38 15
+40 19
+43.2706 13.4503
+45.482 13.1431 c
+</path>
+<path matrix="1 0 0 1 -32 0" fill="black">
+44.5 13 m
+42.4003 24.0168
+43.5 27
+46.4702 25.174
+47 13 c
+</path>
+<path matrix="1 0 0 1 -32 0" fill="black">
+46.7927 13.0143 m
+46.2508 25.952
+48.0217 28.0855
+50.2609 25.7326
+49.1665 12.4953 c
+</path>
+<path matrix="1 0 0 1 -32 0" fill="black">
+49.0992 13.034 m
+49.8736 25.1897
+51.6 27
+53.2409 24.55
+51.6919 12.933 c
+</path>
+<path matrix="1 0 0 1 -32 0" fill="black">
+51.3889 12.5289 m
+52.7358 21.048
+53.8493 22.1243
+55.0011 21.0339
+54.5204 13.2361
+53 8 c
+</path>
+<path matrix="1 0 0 1 -32 0" fill="black">
+53 8 m
+44.6036 8 l
+45 15 l
+52 15 l
+h
+</path>
+<path matrix="1 0 0 1 -34 2" fill="black">
+54 6.00081 m
+54 8.0005 l
+55.9997 8.0005 l
+55.9997 10.0002 l
+57.9994 10.0002 l
+57.9994 8.0005 l
+59.9998 7.9998 l
+59.9998 6.0001 l
+58.0001 6.0001 l
+58.0001 4.0004 l
+56.0004 4.0004 l
+55.9997 6.00081 l
+h
+49 8 m
+47 8 l
+47 23 l
+49 23 l
+h
+</path>
+<text matrix="2.42 0 0 2.42 -100.16 -22.72" pos="48 16" stroke="black" type="label" width="4.692" height="7.043" depth="0.14" halign="center" valign="center">?</text>
 </page>
 </ipe>

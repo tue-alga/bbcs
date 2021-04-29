@@ -8,7 +8,7 @@ import {World} from './world';
 import {Button, Separator, Toolbar} from './ui';
 
 enum EditMode {
-	PAN, SELECT, ADD_BALL, ADD_WALL, ADD_TEXT, ADD_LINE
+	PAN, SELECT, MOVE, ADD_BALL, ADD_WALL, ADD_TEXT, ADD_LINE
 }
 
 enum SimulationMode {
@@ -33,6 +33,7 @@ class BBCS {
 	selectionRectangle = new PIXI.Graphics();
 	selectionBase: [number, number] | null = null;
 	mousePressed = false;
+	isDragging = false;
 
 	lineStart: [number, number] | null = null;
 
@@ -44,15 +45,19 @@ class BBCS {
 	private lastDirection = Direction.RIGHT;
 	private lastColor = Color.BLUE;
 
-	// main toolbar
+	// main toolbars
+	private topBar: Toolbar;
 	private bottomBar: Toolbar;
+	private bottomBarOffset = 0;
 
 	private runButton: Button;
 	private stepButton: Button;
 	private resetButton: Button;
+	private helpButton: Button;
 	
 	private panButton: Button;
 	private selectButton: Button;
+	private moveButton: Button;
 	private addBallButton: Button;
 	private addWallButton: Button;
 	private annotateButton: Button;
@@ -77,55 +82,66 @@ class BBCS {
 	constructor(app: PIXI.Application) {
 		this.app = app;
 
-		this.world = new World();
+		this.world = new World(this.app.renderer);
 
-		this.bottomBar = new Toolbar();
+		this.topBar = new Toolbar(false);
 
-		this.runButton = new Button("play", "Run simulation", "Space");
+		this.runButton = new Button("play", "Run simulation", false, "Space");
 		this.runButton.onClick(this.run.bind(this));
-		this.bottomBar.addChild(this.runButton);
+		this.topBar.addChild(this.runButton);
 
-		this.stepButton = new Button("step", "Run one step");
+		this.stepButton = new Button("step", "Run one step", false);
 		this.stepButton.onClick(this.step.bind(this));
-		this.bottomBar.addChild(this.stepButton);
+		this.topBar.addChild(this.stepButton);
 
-		this.resetButton = new Button("reset", "Reset simulation", "R");
+		this.resetButton = new Button("reset", "Reset simulation", false, "R");
 		this.resetButton.onClick(this.reset.bind(this));
 		this.resetButton.setEnabled(false);
-		this.bottomBar.addChild(this.resetButton);
+		this.topBar.addChild(this.resetButton);
 
-		this.bottomBar.addChild(new Separator());
+		this.topBar.addChild(new Separator());
+		
+		this.helpButton = new Button("help", "Help & tutorial", false);
+		this.helpButton.onClick(this.help.bind(this));
+		this.topBar.addChild(this.helpButton);
+
+		this.bottomBar = new Toolbar(true);
 
 		this.panButton = new Button(
-			"select", "Pan the canvas", "P");
+			"pan", "Pan the canvas", true, "P");
 		this.panButton.setPressed(true);
 		this.panButton.onClick(this.panMode.bind(this));
 		this.bottomBar.addChild(this.panButton);
 
 		this.selectButton = new Button(
-			"select", "Select objects", "S");
+			"select", "Select objects", true, "S");
 		this.selectButton.onClick(this.selectMode.bind(this));
 		this.bottomBar.addChild(this.selectButton);
 
+		this.moveButton = new Button(
+			"move", "Move objects", true, "M");
+		this.moveButton.onClick(this.moveMode.bind(this));
+		//this.bottomBar.addChild(this.moveButton);
+
 		this.addBallButton = new Button(
-			"add-ball", "Add balls", "B");
+			"add-ball", "Add balls", true, "B");
 		this.addBallButton.onClick(this.addBallsMode.bind(this));
 		this.bottomBar.addChild(this.addBallButton);
 
 		this.addWallButton = new Button(
-			"add-wall", "Add walls", "W");
+			"add-wall", "Add walls", true, "W");
 		this.addWallButton.onClick(this.addWallsMode.bind(this));
 		this.bottomBar.addChild(this.addWallButton);
 
 		this.annotateButton = new Button(
-			"add-annotation", "Add annotations");
+			"add-annotation", "Add annotations", true);
 		this.annotateButton.onClick(this.addTextMode.bind(this));
 		this.bottomBar.addChild(this.annotateButton);
 
 		this.bottomBar.addChild(new Separator());
 
 		this.rotateLeftButton = new Button(
-			"rotate-left", "Rotate left");
+			"rotate-left", "Rotate left", true);
 		this.rotateLeftButton.onClick(
 			() => {
 				this.selection.forEach((ball) => {
@@ -142,7 +158,7 @@ class BBCS {
 		this.bottomBar.addChild(this.rotateLeftButton);
 
 		this.rotateRightButton = new Button(
-			"rotate-right", "Rotate right");
+			"rotate-right", "Rotate right", true);
 		this.rotateRightButton.onClick(
 			() => {
 				this.selection.forEach((ball) => {
@@ -159,7 +175,7 @@ class BBCS {
 		this.bottomBar.addChild(this.rotateRightButton);
 
 		this.colorButton = new Button(
-			"color", "Change color");
+			"color", "Change color", true);
 		this.colorButton.onClick(
 			() => {
 				this.selection.forEach((ball) => {
@@ -176,7 +192,7 @@ class BBCS {
 		this.bottomBar.addChild(this.colorButton);
 
 		this.deleteButton = new Button(
-			"delete", "Delete selected", "Delete");
+			"delete", "Delete selected", true, "Delete");
 		this.deleteButton.onClick(this.delete.bind(this));
 		this.deleteButton.setEnabled(false);
 		this.bottomBar.addChild(this.deleteButton);
@@ -184,19 +200,19 @@ class BBCS {
 		this.bottomBar.addChild(new Separator());
 
 		this.saveButton = new Button(
-			"save", "Save & load");
+			"save", "Save & load", true);
 		this.saveButton.onClick(this.save.bind(this));
 		this.bottomBar.addChild(this.saveButton);
 
-		this.annotationsBar = new Toolbar();
+		this.annotationsBar = new Toolbar(true);
 
 		this.addTextButton = new Button(
-			"add-annotation", "Add text", "T");
+			"add-annotation", "Add text", true, "T");
 		this.addTextButton.onClick(this.addTextMode.bind(this));
 		this.annotationsBar.addChild(this.addTextButton);
 
 		this.addLineButton = new Button(
-			"add-wall", "Add lines", "L");
+			"add-line", "Add lines", true, "L");
 		this.addLineButton.onClick(this.addLinesMode.bind(this));
 		this.annotationsBar.addChild(this.addLineButton);
 
@@ -204,14 +220,17 @@ class BBCS {
 		const loadButton = document.getElementById('load-button');
 		loadButton!.addEventListener('click', () => {
 			document.getElementById('dialogs')!.style.display = 'none';
+			document.getElementById('save-dialog')!.style.display = 'none';
 			this.load(this.textArea.value);
 		});
 
 		const closeButton = document.getElementById('close-button');
 		closeButton!.addEventListener('click', () => {
 			document.getElementById('dialogs')!.style.display = 'none';
+			document.getElementById('save-dialog')!.style.display = 'none';
 		});
 
+		this.setupSolutionButtons();
 
 		this.app.ticker.add((delta) => {
 			this.renderFrame(delta);
@@ -226,6 +245,9 @@ class BBCS {
 		this.world.pixi.addChild(this.dropHint);
 		this.dropHint.filters = [new PIXI.filters.AlphaFilter(0.4)];
 		this.world.pixi.addChild(this.selectionRectangle);
+
+		this.topBar.rebuildPixi();
+		this.app.stage.addChild(this.topBar.getPixi());
 
 		this.annotationsBar.rebuildPixi();
 		this.annotationsBar.setVisible(false);
@@ -257,6 +279,8 @@ class BBCS {
 				this.panMode();
 			} else if (event.key === "s") {
 				this.selectMode();
+			} else if (event.key === "m") {
+				this.moveMode();
 			} else if (event.key === "b") {
 				this.addBallsMode();
 			} else if (event.key === "w") {
@@ -278,6 +302,30 @@ class BBCS {
 	}
 
 	update(): void {
+	}
+
+	setupSolutionButtons(): void {
+		const self = this;
+		document.getElementById('and-gate-step-0-button')!.onclick =
+				function() {
+			self.load(`{"_version":3,"balls":[],"walls":[],"texts":[{"x":0,"y":6,"text":"Input 1"},{"x":-3,"y":3,"text":"Input 2"},{"x":5,"y":1,"text":"Output"}],"lines":[{"p1":[-5,2],"p2":[-4,3]},{"p1":[-4,3],"p2":[-3,2]},{"p1":[-3,2],"p2":[-4,1]},{"p1":[-4,1],"p2":[-5,2]},{"p1":[-1,4],"p2":[-2,5]},{"p1":[-2,5],"p2":[-1,6]},{"p1":[-1,6],"p2":[0,5]},{"p1":[0,5],"p2":[-1,4]},{"p1":[3,0],"p2":[4,1]},{"p1":[4,1],"p2":[5,0]},{"p1":[5,0],"p2":[4,-1]},{"p1":[4,-1],"p2":[3,0]}]}`);
+		};
+		document.getElementById('and-gate-step-1-button')!.onclick =
+				function() {
+			self.load(`{"_version":3,"balls":[{"x":-1,"y":5,"vx":0,"vy":-1,"color":[68,187,248]},{"x":-4,"y":2,"vx":1,"vy":0,"color":[248,78,94]}],"walls":[],"texts":[{"x":0,"y":6,"text":"Input 1"},{"x":-3,"y":3,"text":"Input 2"},{"x":5,"y":1,"text":"Output"}],"lines":[{"p1":[-5,2],"p2":[-4,3]},{"p1":[-4,3],"p2":[-3,2]},{"p1":[-3,2],"p2":[-4,1]},{"p1":[-4,1],"p2":[-5,2]},{"p1":[-1,4],"p2":[-2,5]},{"p1":[-2,5],"p2":[-1,6]},{"p1":[-1,6],"p2":[0,5]},{"p1":[0,5],"p2":[-1,4]},{"p1":[3,0],"p2":[4,1]},{"p1":[4,1],"p2":[5,0]},{"p1":[5,0],"p2":[4,-1]},{"p1":[4,-1],"p2":[3,0]}]}`);
+		};
+		document.getElementById('and-gate-step-2-button')!.onclick =
+				function() {
+			self.load(`{"_version":3,"balls":[{"x":-1,"y":5,"vx":0,"vy":-1,"color":[68,187,248]},{"x":-4,"y":2,"vx":1,"vy":0,"color":[248,78,94]}],"walls":[{"x":2,"y":3,"p":false}],"texts":[{"x":0,"y":6,"text":"Input 1"},{"x":-3,"y":3,"text":"Input 2"},{"x":5,"y":1,"text":"Output"}],"lines":[{"p1":[-5,2],"p2":[-4,3]},{"p1":[-4,3],"p2":[-3,2]},{"p1":[-3,2],"p2":[-4,1]},{"p1":[-4,1],"p2":[-5,2]},{"p1":[-1,4],"p2":[-2,5]},{"p1":[-2,5],"p2":[-1,6]},{"p1":[-1,6],"p2":[0,5]},{"p1":[0,5],"p2":[-1,4]},{"p1":[3,0],"p2":[4,1]},{"p1":[4,1],"p2":[5,0]},{"p1":[5,0],"p2":[4,-1]},{"p1":[4,-1],"p2":[3,0]}]}`);
+		};
+		document.getElementById('and-gate-step-3-button')!.onclick =
+				function() {
+			self.load(`{"_version":3,"balls":[{"x":-1,"y":5,"vx":0,"vy":-1,"color":[68,187,248]},{"x":-4,"y":2,"vx":1,"vy":0,"color":[248,78,94]}],"walls":[{"x":2,"y":3,"p":false},{"x":-3,"y":-2,"p":false}],"texts":[{"x":0,"y":6,"text":"Input 1"},{"x":-3,"y":3,"text":"Input 2"},{"x":5,"y":1,"text":"Output"}],"lines":[{"p1":[-5,2],"p2":[-4,3]},{"p1":[-4,3],"p2":[-3,2]},{"p1":[-3,2],"p2":[-4,1]},{"p1":[-4,1],"p2":[-5,2]},{"p1":[-1,4],"p2":[-2,5]},{"p1":[-2,5],"p2":[-1,6]},{"p1":[-1,6],"p2":[0,5]},{"p1":[0,5],"p2":[-1,4]},{"p1":[3,0],"p2":[4,1]},{"p1":[4,1],"p2":[5,0]},{"p1":[5,0],"p2":[4,-1]},{"p1":[4,-1],"p2":[3,0]}]}`);
+		};
+		document.getElementById('not-gate-step-2-button')!.onclick =
+				function() {
+			self.load(`{"_version":3,"balls":[{"x":-4,"y":8,"vx":0,"vy":-1,"color":[68,187,248]},{"x":-7,"y":5,"vx":1,"vy":0,"color":[248,230,110]}],"walls":[{"x":-3,"y":6,"p":false}],"texts":[{"x":3,"y":5,"text":"Output"},{"x":-4,"y":12,"text":"Input"},{"x":-11,"y":5,"text":"Constant"}],"lines":[{"p1":[-5,6],"p2":[-9,6]},{"p1":[-5,6],"p2":[-5,10]},{"p1":[-3,7],"p2":[-3,10]},{"p1":[-2,6],"p2":[1,6]},{"p1":[-9,4],"p2":[-6,4]},{"p1":[-6,4],"p2":[-6,1]},{"p1":[-2,4],"p2":[-2,1]},{"p1":[-2,4],"p2":[1,4]}]}`);
+		};
 	}
 
 	select(obj: Ball | Wall | Annotation | Line): void {
@@ -327,97 +375,109 @@ class BBCS {
 			}
 		}
 
-		this.world.pixi.x = window.innerWidth / 2;
-		this.world.pixi.y = window.innerHeight / 2;
+		this.world.pixi.x = this.app.renderer.width / 2;
+		this.world.pixi.y = this.app.renderer.height / 2;
 		
+		this.topBar.setPosition(
+			this.app.renderer.width / 2 - this.topBar.getWidth() / 2,
+			0);
 		this.bottomBar.setPosition(
-			window.innerWidth / 2 - this.bottomBar.getWidth() / 2,
-			window.innerHeight - this.bottomBar.getHeight());
+			this.app.renderer.width / 2 - this.bottomBar.getWidth() / 2,
+			this.app.renderer.height - this.bottomBar.getHeight() + Math.pow(this.bottomBarOffset, 2));
 		this.annotationsBar.setPosition(
-			window.innerWidth / 2 - this.annotationsBar.getWidth() / 2,
-			window.innerHeight - 2 * this.annotationsBar.getHeight());
+			this.app.renderer.width / 2 - this.annotationsBar.getWidth() / 2,
+			this.app.renderer.height - 2 * this.annotationsBar.getHeight());
 
 		this.world.balls.forEach((ball) => {
 			ball.updatePosition(this.time, this.timeStep);
 		});
+
+		if (this.simulationMode === SimulationMode.RESET) {
+			this.bottomBarOffset = Math.max(this.bottomBarOffset - 0.5 * delta, 0);
+		} else {
+			this.bottomBarOffset = Math.min(this.bottomBarOffset + 0.5 * delta, 10);
+		}
 	}
 	
 	worldClickHandler(e: PIXI.interaction.InteractionEvent): void {
+		if (this.simulationMode !== SimulationMode.RESET) {
+			return;
+		}
+
 		const p = e.data.getLocalPosition(this.world.pixi);
 		let x = p.x / 80;
 		let y = -p.y / 80;
 		this.dropHint.clear();
 
-		if (this.simulationMode === SimulationMode.RESET) {
-
-			if (this.editMode === EditMode.PAN) {
-				if (!this.shiftKeyHeld) {
-					this.deselect();
-				}
-				const ball = this.world.getBall(Math.round(x), Math.round(y));
-				if (ball) {
-					this.select(ball);
-				} else {
-					const [from, to] = this.getWallCoordinates(Math.floor(x), Math.floor(y));
-					const wall = this.world.getWall(from, to);
-					if (wall) {
-						this.select(wall);
-					} else {
-						const annotation = this.world.getAnnotation(Math.round(x), Math.round(y));
-						if (annotation) {
-							this.select(annotation);
-						}
-					}
-				}
-			}
-
-			if (this.editMode === EditMode.ADD_BALL) {
-				x = Math.round(x);
-				y = Math.round(y);
-
-				if ((x + y) % 2 === 0) {
-					const ball = this.world.getBall(x, y);
-					if (!ball) {
-						const newBall = this.world.addBall(x, y, this.lastDirection, this.lastColor);
-						this.deselect();
-						this.select(newBall);
-					}
-				}
-			}
-
-			if (this.editMode === EditMode.ADD_WALL) {
-				x = Math.floor(x);
-				y = Math.floor(y);
-
-				const [from, to] = this.getWallCoordinates(x, y);
-				if (!this.world.hasWall(from, to)) {
-					const newWall = this.world.addWall(from, to);
-					this.deselect();
-					this.select(newWall);
-				}
-			}
-
-			if (this.editMode === EditMode.ADD_TEXT) {
-				let text = window.prompt('Enter annotation text');
-				if (text) {
-					const newAnnotation = this.world.addAnnotation(
-							[Math.round(x), Math.round(y)], text);
-					this.deselect();
-					this.select(newAnnotation);
-				}
-			}
-
-			if (this.editMode === EditMode.ADD_LINE) {
+		if (this.editMode === EditMode.SELECT && !this.isDragging) {
+			if (!this.shiftKeyHeld) {
 				this.deselect();
-				if (!this.lineStart) {
-					this.lineStart = [Math.round(x), Math.round(y)];
+			}
+			const ball = this.world.getBall(Math.round(x), Math.round(y));
+			if (ball) {
+				this.select(ball);
+			} else {
+				const [from, to] = this.getWallCoordinates(Math.floor(x), Math.floor(y));
+				const wall = this.world.getWall(from, to);
+				if (wall) {
+					this.select(wall);
 				} else {
-					let newLine = this.world.addLine(this.lineStart, [Math.round(x), Math.round(y)]);
-					this.lineStart = null;
-					this.select(newLine);
+					const annotation = this.world.getAnnotation(Math.round(x), Math.round(y));
+					if (annotation) {
+						this.select(annotation);
+					}
 				}
 			}
 		}
+
+		if (this.editMode === EditMode.ADD_BALL) {
+			x = Math.round(x);
+			y = Math.round(y);
+
+			if ((x + y) % 2 === 0) {
+				const ball = this.world.getBall(x, y);
+				if (!ball) {
+					const newBall = this.world.addBall(x, y, this.lastDirection, this.lastColor);
+					this.deselect();
+					this.select(newBall);
+				}
+			}
+		}
+
+		if (this.editMode === EditMode.ADD_WALL) {
+			x = Math.floor(x);
+			y = Math.floor(y);
+
+			const [from, to] = this.getWallCoordinates(x, y);
+			if (!this.world.hasWall(from, to)) {
+				const newWall = this.world.addWall(from, to);
+				this.deselect();
+				this.select(newWall);
+			}
+		}
+
+		if (this.editMode === EditMode.ADD_TEXT) {
+			let text = window.prompt('Enter annotation text');
+			if (text) {
+				const newAnnotation = this.world.addAnnotation(
+						[Math.round(x), Math.round(y)], text);
+				this.deselect();
+				this.select(newAnnotation);
+			}
+		}
+
+		if (this.editMode === EditMode.ADD_LINE) {
+			this.deselect();
+			if (!this.lineStart) {
+				this.lineStart = [Math.round(x), Math.round(y)];
+			} else {
+				let newLine = this.world.addLine(this.lineStart, [Math.round(x), Math.round(y)]);
+				this.lineStart = null;
+				this.select(newLine);
+			}
+		}
+
+		this.isDragging = false;
 	}
 
 	private getWallCoordinates(x: number, y: number):
@@ -499,7 +559,6 @@ class BBCS {
 
 	worldMouseUpHandler(e: PIXI.interaction.InteractionEvent): void {
 		this.mousePressed = false;
-
 		const p = e.data.getLocalPosition(this.world.pixi);
 		const x = p.x / 80;
 		const y = -p.y / 80;
@@ -562,7 +621,7 @@ class BBCS {
 	}
 
 	worldDragHandler(e: PIXI.interaction.InteractionEvent): void {
-
+		this.isDragging = true;
 		const p = e.data.getLocalPosition(this.world.pixi);
 		let x = p.x / 80;
 		let y = -p.y / 80;
@@ -601,6 +660,7 @@ class BBCS {
 			this.stepButton.setEnabled(true);
 		} else {
 			this.runUntil = Infinity;
+			this.panMode();
 			this.simulationMode = SimulationMode.RUNNING;
 			this.runButton.setIcon("pause");
 			this.runButton.setTooltip("Pause simulation");
@@ -608,9 +668,9 @@ class BBCS {
 		}
 
 		this.deselect();
-		this.panButton.setEnabled(false);
 		this.resetButton.setEnabled(true);
 		this.selectButton.setEnabled(false);
+		this.moveButton.setEnabled(false);
 		this.addBallButton.setEnabled(false);
 		this.addWallButton.setEnabled(false);
 		this.annotateButton.setEnabled(false);
@@ -631,6 +691,7 @@ class BBCS {
 		this.resetButton.setEnabled(true);
 		this.panButton.setEnabled(false);
 		this.selectButton.setEnabled(false);
+		this.moveButton.setEnabled(false);
 		this.addBallButton.setEnabled(false);
 		this.addWallButton.setEnabled(false);
 		this.annotateButton.setEnabled(false);
@@ -647,6 +708,7 @@ class BBCS {
 
 		this.panButton.setEnabled(true);
 		this.selectButton.setEnabled(true);
+		this.moveButton.setEnabled(true);
 		this.addBallButton.setEnabled(true);
 		this.addWallButton.setEnabled(true);
 		this.annotateButton.setEnabled(true);
@@ -661,6 +723,7 @@ class BBCS {
 	private resetModeButtons(): void {
 		this.panButton.setPressed(false);
 		this.selectButton.setPressed(false);
+		this.moveButton.setPressed(false);
 		this.addBallButton.setPressed(false);
 		this.addWallButton.setPressed(false);
 		this.annotateButton.setPressed(false);
@@ -682,6 +745,14 @@ class BBCS {
 		this.world.viewport.plugins.pause('drag');
 		this.resetModeButtons();
 		this.selectButton.setPressed(true);
+		this.dropHint.clear();
+	}
+
+	moveMode(): void {
+		this.editMode = EditMode.MOVE;
+		this.world.viewport.plugins.pause('drag');
+		this.resetModeButtons();
+		this.moveButton.setPressed(true);
 		this.dropHint.clear();
 	}
 
@@ -741,11 +812,14 @@ class BBCS {
 		const file = this.world.serialize();
 		const dialogs = document.getElementById('dialogs');
 		dialogs!.style.display = 'block';
+		const dialog = document.getElementById('save-dialog');
+		dialog!.style.display = 'block';
 		this.textArea.value = file;
 	}
 
 	load(data: string): void {
-		const newWorld = new World();
+		this.reset();
+		const newWorld = new World(this.app.renderer);
 		try {
 			newWorld.deserialize(data);
 		} catch (e) {
@@ -755,6 +829,22 @@ class BBCS {
 		this.world = newWorld;
 		this.app.stage.removeChildren();
 		this.setup();
+	}
+
+	help(): void {
+		const bbcs = document.getElementById('bbcs')!;
+		if (this.helpButton.isPressed()) {
+			this.helpButton.setPressed(false);
+			document.body.classList.remove('help-pane-open');
+			this.app.renderer.resize(bbcs.offsetWidth + 600, bbcs.offsetHeight);
+		} else {
+			this.helpButton.setPressed(true);
+			document.body.classList.add('help-pane-open');
+		}
+		const self = this;
+		setTimeout(function () {
+			self.app.renderer.resize(bbcs.offsetWidth, bbcs.offsetHeight);
+		}, 600);
 	}
 }
 

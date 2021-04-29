@@ -19,7 +19,7 @@ class World {
 
 	world: WorldCell[][] = [];
 
-	viewport = new Viewport();
+	viewport: Viewport;
 	pixi = new PIXI.Container();
 	grid: PIXI.Mesh;
 
@@ -28,7 +28,11 @@ class World {
 	annotations: Annotation[] = [];
 	lines: Line[] = [];
 
-	constructor() {
+	constructor(renderer: PIXI.Renderer) {
+		this.viewport = new Viewport({
+			interaction: renderer.plugins.interaction
+		});
+
 		this.viewport.addChild(this.pixi);
 
 		this.viewport.drag();
@@ -84,7 +88,10 @@ class World {
 				gl_FragColor = vec4(gray, gray, gray, 1.0);
 			}
 			`);
-		this.grid = new PIXI.Mesh(gridGeometry, gridShader);
+		// TODO the <any> cast below is to avoid a spurious TypeScript
+		// compilation error: it expects a PIXI.MeshMaterial, even though
+		// according to the docs, a PIXI.Shader is okay too
+		this.grid = new PIXI.Mesh(gridGeometry, <any> gridShader);
 		this.pixi.addChild(this.grid);
 	}
 
@@ -305,19 +312,27 @@ class World {
 				'p': wall.positive
 			});
 		});
-		let annotations: any = [];
+		let texts: any = [];
 		this.annotations.forEach((annotation) => {
-			annotations.push({
+			texts.push({
 				'x': annotation.p[0],
 				'y': annotation.p[1],
 				'text': annotation.text
+			});
+		});
+		let lines: any = [];
+		this.lines.forEach((line) => {
+			lines.push({
+				'p1': line.p1,
+				'p2': line.p2
 			});
 		});
 		let obj: any = {
 			'_version': 3,
 			'balls': balls,
 			'walls': walls,
-			'annotations': annotations
+			'texts': texts,
+			'lines': lines
 		};
 		return JSON.stringify(obj);
 	}
@@ -327,6 +342,21 @@ class World {
 
 		if (obj['_version'] > 3) {
 			throw 'Save file with incorrect version';
+		}
+
+		if (obj.hasOwnProperty('lines')) {
+			let lines: any[] = obj['lines'];
+			lines.forEach((line: any) => {
+				this.addLine(line['p1'], line['p2']);
+			});
+		}
+
+		if (obj.hasOwnProperty('texts')) {
+			let texts: any[] = obj['texts'];
+			texts.forEach((text: any) => {
+				this.addAnnotation([text['x'], text['y']],
+						text['text']);
+			});
 		}
 
 		let balls: any[] = obj['balls'];
@@ -344,13 +374,6 @@ class World {
 			this.addWallTopLeft(wall['x'], wall['y'], wall['p']);
 		});
 
-		if (obj.hasOwnProperty('annotations')) {
-			let annotations: any[] = obj['annotations'];
-			annotations.forEach((annotation: any) => {
-				this.addAnnotation([annotation['x'], annotation['y']],
-						annotation['text']);
-			});
-		}
 	}
 }
 

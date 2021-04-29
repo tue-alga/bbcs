@@ -21,10 +21,12 @@ class Line {
 		this.linePixi = new PIXI.Graphics();
 		Line.drawPixi(this.linePixi, p1, p2);
 		this.pixi.addChild(this.linePixi);
+
+		this.updatePosition(0, 0);
 	}
 
 	static drawPixi(p: PIXI.Graphics, p1: [number, number], p2: [number, number]): void {
-		p.lineStyle(8, 0x888888);
+		p.lineStyle(8, 0xb0b0b0);
 		p.moveTo(p1[0] * 80, p1[1] * -80);
 		p.lineTo(p2[0] * 80, p2[1] * -80);
 	}

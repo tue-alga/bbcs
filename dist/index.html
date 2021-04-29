@@ -6,8 +6,43 @@
 		<style>
 			* {
 				padding: 0;
-				margin: 0;
 				font-family: "Fira Sans";
+			}
+
+			body {
+				overflow: hidden;
+			}
+
+			#bbcs {
+				position: absolute;
+				left: 0;
+				right: 0;
+				top: 0;
+				bottom: 0;
+				transition: right .5s;
+			}
+
+			.help-pane-open #bbcs {
+				right: 600px;
+			}
+
+			#help-pane {
+				position: absolute;
+				left: 100%;
+				top: 0;
+				bottom: 0;
+				width: 561px;
+				margin-left: 0;
+				transition: margin .5s;
+				padding: 20px;
+				overflow-y: scroll;
+				background-color: white;
+				line-height: 150%;
+			}
+
+			.help-pane-open #help-pane {
+				margin-left: -600px;
+				box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
 			}
 
 			#dialogs {
@@ -30,6 +65,7 @@
 				background-color: white;
 				border-radius: 5px;
 				box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+				display: none;
 			}
 
 			.dialog-title {
@@ -60,11 +96,40 @@
 				border: 1px solid #ccc;
 				cursor: pointer;
 			}
+
+			h2 {
+				margin-top: 50px;
+				margin-bottom: 10px;
+			}
+			h3 {
+				margin-top: 30px;
+				margin-bottom: 10px;
+			}
+
+			#help-pane img {
+				vertical-align: middle;
+				width: 32px;
+			}
+			#help-pane img.full-width-image {
+				display: block;
+				width: auto;
+				max-width: 100%;
+				margin-left: auto;
+				margin-right: auto;
+			}
+
+			#help-pane p {
+				margin-top: 5px;
+				margin-bottom: 15px;
+			}
 		</style>
 	</head>
 	<body>
+		<div id="bbcs">
+			<canvas id="bbcs-canvas"></canvas>
+		</div>
 		<div id="dialogs">
-			<div class="dialog">
+			<div id="save-dialog" class="dialog">
 				<div class="dialog-title">
 					Save &amp; load
 				</div>
@@ -76,6 +141,91 @@
 					<a class="button" id="load-button">Load</a>
 					<a class="button" id="close-button">Close</a>
 				</div>
+			</div>
+		</div>
+		<div id="help-pane">
+			<div class="dialog-title">
+				Help &amp; tutorial
+			</div>
+			<div class="dialog-content">
+				<p>BBCS is a simulator for the billard-ball computing model, a reversible model of computation invented by Fredkin and Toffoli in 1982.</p>
+
+				<h2>Help</h2>
+
+				<h3>Editing mode</h3>
+				<p>Modes of interaction:<br>
+				<img src="icons/pan.png">: Pan the canvas around.<br>
+				<img src="icons/select.png">: Select objects. Either click once on an object to select it, or drag to draw a rectangle and select all objects inside it.</p>
+				<p>Adding objects to your drawing:<br>
+				<img src="icons/add-ball.png">: Click to add a ball in that location. Balls move diagonally with a constant speed, and bounce against other balls and walls.<br>
+				<img src="icons/add-wall.png">: Click to add a wall in that location.<br>
+				<img src="icons/add-annotation.png">: Click to add a text label or line in that location. (These are only for annotating your model, and do not influence the behavior.)</p>
+				<p>Other editing tools:<br>
+				<img src="icons/rotate-left.png"> and <img src="icons/rotate-right.png">: Rotates any selected balls in the indicated direction.<br>
+				<img src="icons/color.png">: Changes the color of any selected balls (cycles through six available colors).<br>
+				<img src="icons/delete.png">: Deletes all selected objects.<br>
+				<img src="icons/save.png">: Shows a dialog box to save your drawing, or load a drawing you saved earlier.</p>
+
+				<h3>Simulation mode</h3>
+				<p>Click <img src="icons/play.png"> to simulate your construction. The editing toolbar at the bottom of the screen will disappear; to make it reappear, click <img src="icons/reset.png"> to reset the simulation and go back into editing mode.</p>
+				<p>Using <img src="icons/pause.png">, you can pause a running simulation, and <img src="icons/step.png"> runs the simulation for a single step.</p>
+
+				<h2>Tutorial: Building an AND-gate</h2>
+				<p>Billiard-ball computers are universal: any computation that can be made in a Turing machine can also be made using a billiard-ball computer. In particular, any logic gate can be built. In this tutorial, you will learn how to build an AND-gate.</p>
+
+				<p>In the billiard ball model, logic signals are represented by presence or absence of a ball at a certain location. If a ball passes this location, that represents a 1; if no ball passes it, that represents a 0. We will start our construction by marking the two input locations and the output location of the gate. The aim of the AND-gate is to produce a ball in the output location if and only if both input locations contain a ball.</p>
+
+				<p><i>Click the button below to load markings for the input and output locations. (This will overwrite your construction.)</i></p>
+				<p><a class="button solution-button" id="and-gate-step-0-button">&larr; Load inputs and outputs</a></p>
+
+				<h3>Step 1</h3>
+				<p>As a first step, place a ball facing southeast in input 1, and a ball facing northeast in input 2. These directions are such that the paths of the balls intersect. Hence, when you click <img src="icons/play.png"> to run the simulation, the balls will collide and bounce off each other, altering their trajectory. Of course, if only one of the two balls (or no ball at all) is present, no collision will happen. Hence, our AND-gate should produce a ball on the output location if and only if a collision happened.</p>
+				<p><a class="button solution-button" id="and-gate-step-1-button">&larr; See solution</a></p>
+
+				<h3>Step 2</h3>
+				<p>The sketch below shows the trajectories if there is a collision (solid lines) and if there is no collision (dotted lines).</p>
+				<img class="full-width-image" src="images/and-gate-paths.png">
+
+				<p>The solid blue and dotted red trajectories differ by one unit vertically. Hence, we could finish the gate by placing the output location on the solid blue trajectory. However, in that case, if there is no collision, the ball from input 2 would &lsquo;trespass&rsquo; partially into the output location. That is undesirable, because it may disturb other gates, if we want to use our gate in a larger construction.</p>
+
+				<p>So, we should introduce more separation between the solid blue and the dotted red trajectories. Place a horizontal wall between the inputs and the output that reflects the solid blue trajectory down, but leaves the dotted red trajectory alone. In other words, if there was a collision, the ball from input 1 should be reflected back down, but if there was no collision, the ball from input 2 should not be reflected. You can test this by removing the ball from input 1 and running the simulation.</p>
+				<p><a class="button solution-button" id="and-gate-step-2-button">&larr; See solution</a></p>
+
+				<h3>Step 3</h3>
+				<p>Similarly, we should introduce separation between the solid red and the dotted blue trajectory. To do this, make the construction vertically symmetric by placing another wall to reflect the ball from input 2 back up if there was a collision.</p>
+				<p>If both walls are placed correctly, then if both balls are present, they should collide a second time, and one of them should end up in the output location. If only a single ball is present, no collision will take place and the output location will stay empty.</p>
+				<p><a class="button solution-button" id="and-gate-step-3-button">&larr; See solution</a></p>
+
+				<h3>Notes</h3>
+				<ul>
+					<li>
+						<p>It can be useful to use the <img src="icons/add-line.png"> tool to indicate the possible paths of the balls more clearly, like this:</p>
+						<img class="full-width-image" src="images/and-gate-lines.png">
+					</li>
+					<li>
+						<p>If only one of the two input balls is present, that ball still has to leave the gate somewhere (see the paths on the top and bottom in the figure above). We call these <i>garbage outputs</i>. When using a gate in a larger construction, garbage outputs are annoying as they can disturb other parts of the construction. Therefore it is useful to minimize the number of garbage outputs.</p>
+						<p>Our AND-gate has three garbage outputs, of which one mirrors the actual output. By slightly moving some parts of our AND-gate (thereby breaking vertical symmetry), we can actually make two of these garbage outputs overlap, resulting in a gate with only two garbage outputs. Do you see how?</p>
+					</li>
+					<!--<li>Combine two AND-gates to build an AND-gate with three inputs <i>x</i>, <i>y</i>, and <i>z</i>, that computes <i>x</i> ∧ <i>y</i> ∧ <i>z</i>.</li>-->
+				</ul>
+
+				<h2>Tutorial: Building a NOT-gate</h2>
+				<p>Now that we know how to build an AND-gate, it is time to try some other gates. However, when trying to build a NOT-gate, we immediately run into a problem: if we receive no ball in the input, how will we magically make a ball appear that we can output?</p>
+				<p>We use a simple trick to sidestep this issue: when building the gate, we simply assume that a ball will always be available to us in a certain location. We call such a ball a <i>constant input</i>.
+
+				<h3>Step 1</h3>
+				<p>Again, we start by marking input positions. We need one input, and one constant input. We will let them collide just as in the AND-gate.</p>
+
+				<h3>Step 2</h3>
+				<p>Position the output such that the constant input ball enters it if there was no collision. Then place a horizontal wall such that if there was a collision (that is, there was a ball in the input), the input ball is reflected downwards, away from the output.</p>
+				<p><a class="button solution-button" id="not-gate-step-2-button">&larr; See solution</a></p>
+
+				<h3>Notes</h3>
+				<ul>
+					<li>
+						<p>The combination of a NOT-gate and an AND-gate is called a NAND-gate. NAND-gates are <i>universal</i>, which means that all boolean functions can be implemented with just NAND-gates. Hence, by creating NOT- and AND-gates in the billiard-ball computing model, we showed that all boolean formulas can be implemented.</p>
+					</li>
+				</ul>
 			</div>
 		</div>
 		<script src="main.js"></script>
